@@ -99,30 +99,37 @@ body.editing [contenteditable]:focus { background: rgba(45,110,78,.07); }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js">
-// ── Password screen ──────────────────────────
-(function() {
-  if (sessionStorage.getItem('tm-auth') === '1') {
-    document.getElementById('pw-screen').classList.add('hidden');
+<style>
+  #pw-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
   }
-})();
-async function sha256(msg) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-async function checkPw() {
-  const val = document.getElementById('pw-input').value;
-  const hash = await sha256(val);
-  if (hash === 'ed02a5e2f47974fa544bd3d3de1e6bc01c1625a767fb5e2af20466e837b9b22c') {
-    sessionStorage.setItem('tm-auth', '1');
-    document.getElementById('pw-screen').classList.add('hidden');
-  } else {
-    document.getElementById('pw-error').style.display = 'block';
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-input').focus();
+  #pw-screen.hidden { display: none; }
+  #pw-box {
+    background: #fff; border-radius: 16px; padding: 40px 36px;
+    text-align: center; max-width: 340px; width: 90%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
   }
-}
-</script>
+  #pw-box h2 { margin: 0 0 6px; font-size: 1.3rem; color: #1a1a2e; }
+  #pw-box p { margin: 0 0 20px; font-size: 0.9rem; color: #666; }
+  #pw-input {
+    width: 100%; box-sizing: border-box;
+    padding: 12px 14px; border: 2px solid #ddd; border-radius: 8px;
+    font-size: 1.1rem; text-align: center; letter-spacing: 3px;
+    margin-bottom: 12px; outline: none;
+  }
+  #pw-input:focus { border-color: #f59e0b; }
+  #pw-btn {
+    width: 100%; padding: 12px; background: #2d6a4f; border: none;
+    border-radius: 8px; font-size: 1rem; font-weight: 600;
+    color: #fff; cursor: pointer;
+  }
+  #pw-btn:hover { background: #1b4332; }
+  #pw-error { color: #dc2626; font-size: 0.85rem; display: none; margin-top: 10px; }
+</style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
@@ -712,6 +719,29 @@ async function refreshAllRoomTags() {
   } catch(e) {}
 }
 window.addEventListener('load', () => { refreshAllCounts(); refreshAllRoomTags(); });
+</script>
+
+<script>
+// ── Password screen ───────────────────────────
+async function sha256(msg) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function checkPw() {
+  const val = document.getElementById('pw-input').value;
+  const hash = await sha256(val);
+  if (hash === 'ed02a5e2f47974fa544bd3d3de1e6bc01c1625a767fb5e2af20466e837b9b22c') {
+    sessionStorage.setItem('tm-auth', '1');
+    document.getElementById('pw-screen').classList.add('hidden');
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+if (sessionStorage.getItem('tm-auth') === '1') {
+  document.getElementById('pw-screen').classList.add('hidden');
+}
 </script>
 </body>
 </html>
