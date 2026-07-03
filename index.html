@@ -737,7 +737,8 @@ async function exportData(btn) {
     const classGroups = {};
     Object.keys(SESSIONS).forEach(sid => {
       const s = SESSIONS[sid];
-      var key2 = s.name + ' - ' + s.campus;
+      var week2 = sid.startsWith('w1') ? 'W1' : 'W2';
+      var key2 = week2 + ' ' + s.name + ' - ' + s.campus;
       if (!classGroups[key2]) classGroups[key2] = [];
       classGroups[key2].push({ sid: sid, s: s });
     });
