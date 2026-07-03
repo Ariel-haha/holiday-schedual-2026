@@ -746,8 +746,7 @@ async function exportData(btn) {
     });
 
     // Convert to CSV string
-    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('
-');
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
 
     // Download
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -760,9 +759,7 @@ async function exportData(btn) {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch(e) {
-    alert('Export failed. Make sure you are on the live website (not a local file).
-
-Error: ' + e.message);
+    alert('Export failed. Make sure you are on the live website, not a local file.\n\nError: ' + e.message);
   }
   btn.innerHTML = '&#11123;&nbsp; Export Students';
   btn.disabled = false;
