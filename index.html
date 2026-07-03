@@ -131,6 +131,7 @@ body.editing [contenteditable]:focus { background: rgba(45,110,78,.07); }
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="pw-screen">
@@ -720,46 +721,47 @@ async function refreshAllRoomTags() {
   } catch(e) {}
 }
 
-// ── Export students to CSV ────────────────────
+// ── Export students to Excel (one sheet per class) ──
 async function exportData(btn) {
   btn.textContent = 'Exporting...';
   btn.disabled = true;
   try {
-    // Fetch from Firebase
     const studentsSnap = await db.collection('students').get();
     const roomNamesSnap = await db.collection('roomNames').get();
     const studentData = {}, roomNameData = {};
     studentsSnap.forEach(doc => { studentData[doc.id] = doc.data().names || []; });
     roomNamesSnap.forEach(doc => { roomNameData[doc.id] = doc.data().name || ''; });
 
-    // Build CSV rows
-    const rows = [['Week','Class','Campus','Day','Date','Time','Tutor','Room','Student Count','Students']];
+    // Group sessions by class name
+    const classGroups = {};
     Object.keys(SESSIONS).forEach(sid => {
       const s = SESSIONS[sid];
-      const week = sid.startsWith('w1') ? 'Week 1 (6-12 Jul)' : 'Week 2 (13-19 Jul)';
-      s.rooms.forEach((room, ri) => {
-        const key = sid + '-r' + ri;
-        const students = studentData[key] || [];
-        const roomName = roomNameData[key] || room.label || (s.rooms.length > 1 ? 'Room ' + (ri+1) : '');
-        rows.push([week, s.name, s.campus, s.day, s.date || '', s.time, room.tutor, roomName, students.length, students.join('; ')]);
-      });
+      if (!classGroups[s.name]) classGroups[s.name] = [];
+      classGroups[s.name].push({ sid, s });
     });
 
-    // Convert to CSV string
-    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+    const wb = XLSX.utils.book_new();
 
-    // Download
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'TM_Holiday_Students.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    Object.keys(classGroups).forEach(className => {
+      const rows = [['Week', 'Campus', 'Day', 'Time', 'Tutor', 'Room', 'No. of Students', 'Student Names']];
+      classGroups[className].forEach(function(item) {
+        var sid = item.sid, s = item.s;
+        var week = sid.startsWith('w1') ? 'Week 1 (6-12 Jul)' : 'Week 2 (13-19 Jul)';
+        s.rooms.forEach(function(room, ri) {
+          var key = sid + '-r' + ri;
+          var students = studentData[key] || [];
+          var roomName = roomNameData[key] || room.label || (s.rooms.length > 1 ? 'Room ' + (ri + 1) : '-');
+          rows.push([week, s.campus, s.day, s.time, room.tutor, roomName, students.length, students.join(', ')]);
+        });
+      });
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [18, 14, 12, 14, 14, 10, 14, 40].map(function(w) { return { wch: w }; });
+      XLSX.utils.book_append_sheet(wb, ws, className.substring(0, 31));
+    });
+
+    XLSX.writeFile(wb, 'TM_Holiday_Students.xlsx');
   } catch(e) {
-    alert('Export failed. Make sure you are on the live website, not a local file.\n\nError: ' + e.message);
+    alert('Export failed: ' + e.message);
   }
   btn.innerHTML = '&#11123;&nbsp; Export Students';
   btn.disabled = false;
