@@ -736,8 +736,9 @@ async function exportData(btn) {
     const classGroups = {};
     Object.keys(SESSIONS).forEach(sid => {
       const s = SESSIONS[sid];
-      if (!classGroups[s.name]) classGroups[s.name] = [];
-      classGroups[s.name].push({ sid, s });
+      var key2 = s.name + ' - ' + s.campus;
+      if (!classGroups[key2]) classGroups[key2] = [];
+      classGroups[key2].push({ sid: sid, s: s });
     });
 
     const wb = XLSX.utils.book_new();
