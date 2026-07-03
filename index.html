@@ -158,6 +158,7 @@ body.editing [contenteditable]:focus { background: rgba(45,110,78,.07); }
 <div class="toolbar">
   <button class="btn btn-edit" onclick="toggleEdit(this)">&#9998;&nbsp; Edit Mode</button>
   <button class="btn btn-print" onclick="window.print()">&#128438;&nbsp; Print / PDF</button>
+  <button class="btn" style="background:#1a6b3c;color:#fff;border:none;" onclick="exportData(this)">&#11123;&nbsp; Export Students</button>
 </div>
 <p id="editHint">Click any text on a card to edit it — class name, tutor, time, or student count.</p>
 
@@ -718,6 +719,55 @@ async function refreshAllRoomTags() {
     });
   } catch(e) {}
 }
+
+// ── Export students to CSV ────────────────────
+async function exportData(btn) {
+  btn.textContent = 'Exporting...';
+  btn.disabled = true;
+  try {
+    // Fetch from Firebase
+    const studentsSnap = await db.collection('students').get();
+    const roomNamesSnap = await db.collection('roomNames').get();
+    const studentData = {}, roomNameData = {};
+    studentsSnap.forEach(doc => { studentData[doc.id] = doc.data().names || []; });
+    roomNamesSnap.forEach(doc => { roomNameData[doc.id] = doc.data().name || ''; });
+
+    // Build CSV rows
+    const rows = [['Week','Class','Campus','Day','Date','Time','Tutor','Room','Student Count','Students']];
+    Object.keys(SESSIONS).forEach(sid => {
+      const s = SESSIONS[sid];
+      const week = sid.startsWith('w1') ? 'Week 1 (6-12 Jul)' : 'Week 2 (13-19 Jul)';
+      s.rooms.forEach((room, ri) => {
+        const key = sid + '-r' + ri;
+        const students = studentData[key] || [];
+        const roomName = roomNameData[key] || room.label || (s.rooms.length > 1 ? 'Room ' + (ri+1) : '');
+        rows.push([week, s.name, s.campus, s.day, s.date || '', s.time, room.tutor, roomName, students.length, students.join('; ')]);
+      });
+    });
+
+    // Convert to CSV string
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('
+');
+
+    // Download
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TM_Holiday_Students.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch(e) {
+    alert('Export failed. Make sure you are on the live website (not a local file).
+
+Error: ' + e.message);
+  }
+  btn.innerHTML = '&#11123;&nbsp; Export Students';
+  btn.disabled = false;
+}
+
 window.addEventListener('load', () => { refreshAllCounts(); refreshAllRoomTags(); });
 </script>
 
